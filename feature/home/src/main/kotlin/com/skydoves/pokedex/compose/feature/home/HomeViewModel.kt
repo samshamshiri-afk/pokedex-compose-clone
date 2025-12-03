@@ -17,6 +17,9 @@
 package com.skydoves.pokedex.compose.feature.home
 
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewModelScope
 import com.skydoves.pokedex.compose.core.data.repository.home.HomeRepository
 import com.skydoves.pokedex.compose.core.model.Pokemon
@@ -26,7 +29,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -38,15 +43,51 @@ class HomeViewModel @Inject constructor(
   internal val uiState: ViewModelStateFlow<HomeUiState> = viewModelStateFlow(HomeUiState.Loading)
   private var isLastPageReached = false
 
+  var isSearchActive by mutableStateOf(false)
+    private set
+
+  var searchQuery by mutableStateOf("")
+    private set
+  private val _searchQueryFlow = MutableStateFlow("")
+
+  fun toggleSearchActive() {
+    isSearchActive = !isSearchActive
+    if (!isSearchActive) {
+      searchQuery = ""
+      pokemonFetchingIndex.value = 0
+    }
+  }
+
+  fun updateSearchQuery(query: String) {
+    searchQuery = query
+    _searchQueryFlow.value = query
+    if (query.isBlank()) {
+      pokemonFetchingIndex.value = 0
+      isLastPageReached = false
+    }
+  }
+
   private val pokemonFetchingIndex: MutableStateFlow<Int> = MutableStateFlow(0)
-  val pokemonList: StateFlow<List<Pokemon>> = pokemonFetchingIndex.flatMapLatest { page ->
+
+  val pokemonList: StateFlow<List<Pokemon>> = combine(
+    pokemonFetchingIndex,
+    _searchQueryFlow
+  ) { page, query ->
+    page to query
+  }.flatMapLatest { (page, query) ->
     homeRepository.fetchPokemonList(
       page = page,
       onStart = { uiState.tryEmit(key, HomeUiState.Loading) },
       onComplete = { uiState.tryEmit(key, HomeUiState.Idle) },
       onLastPageReached = { isLastPageReached = true },
       onError = { uiState.tryEmit(key, HomeUiState.Error(it)) },
-    )
+    ).map { list ->
+            if (query.isBlank()) {
+        list
+      } else {
+        list.filter { it.name.contains(query, ignoreCase = true) }
+      }
+    }
   }.stateIn(
     scope = viewModelScope,
     started = SharingStarted.WhileSubscribed(5_000),
@@ -54,7 +95,7 @@ class HomeViewModel @Inject constructor(
   )
 
   fun fetchNextPokemonList() {
-    if (uiState.value != HomeUiState.Loading && !isLastPageReached) {
+    if (uiState.value != HomeUiState.Loading && !isLastPageReached && searchQuery.isBlank()) {
       pokemonFetchingIndex.value++
     }
   }

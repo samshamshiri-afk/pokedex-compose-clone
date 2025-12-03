@@ -81,7 +81,12 @@ fun PokedexHome(
   val pokemonList by homeViewModel.pokemonList.collectAsStateWithLifecycle()
 
   Column(modifier = Modifier.fillMaxSize()) {
-    PokedexAppBar()
+    PokedexAppBar(
+      onSearchButtonClicked = homeViewModel::toggleSearchActive,
+      searchText = homeViewModel.searchQuery,
+      onSearchTextChanged = homeViewModel::updateSearchQuery,
+      isSearchActive = homeViewModel.isSearchActive
+    )
 
     HomeContent(
       sharedTransitionScope = sharedTransitionScope,
