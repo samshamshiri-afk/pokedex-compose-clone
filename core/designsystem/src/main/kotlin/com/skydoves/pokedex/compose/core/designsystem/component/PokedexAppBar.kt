@@ -16,10 +16,18 @@
 
 package com.skydoves.pokedex.compose.core.designsystem.component
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,15 +36,38 @@ import com.skydoves.pokedex.compose.core.designsystem.theme.PokedexTheme
 import com.skydoves.pokedex.compose.designsystem.R
 
 @Composable
-fun PokedexAppBar() {
+fun PokedexAppBar(
+  onSearchButtonClicked: () -> Unit = {},
+  searchText: String = "",
+  onSearchTextChanged: (String) -> Unit = {},
+  isSearchActive: Boolean,
+) {
   TopAppBar(
     title = {
-      Text(
-        text = stringResource(id = R.string.app_name),
-        color = PokedexTheme.colors.absoluteWhite,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
-      )
+      if (isSearchActive) {
+        SearchBarTextField(
+          searchText = searchText,
+          onSearchTextChanged = onSearchTextChanged
+        )
+      } else {
+        Text(
+          text = stringResource(id = R.string.app_name),
+          color = PokedexTheme.colors.absoluteWhite,
+          fontSize = 18.sp,
+          fontWeight = FontWeight.Bold,
+        )
+      }
+    },
+    actions = {
+      IconButton(
+        onClick = onSearchButtonClicked
+      ) {
+        Icon(
+          imageVector = if (isSearchActive) Icons.Default.Clear else Icons.Default.Search,
+          contentDescription = if (isSearchActive) "Clear" else "Search",
+          tint = PokedexTheme.colors.absoluteWhite,
+        )
+      }
     },
     colors = TopAppBarDefaults.topAppBarColors().copy(
       containerColor = PokedexTheme.colors.primary,
@@ -44,10 +75,52 @@ fun PokedexAppBar() {
   )
 }
 
+@Composable
+fun SearchBarTextField(
+  searchText: String,
+  onSearchTextChanged: (String) -> Unit
+) {
+  TextField(
+    value = searchText,
+    onValueChange = onSearchTextChanged,
+    placeholder = {
+      Text(
+        text = stringResource(id = R.string.search_pokemon),
+        color = PokedexTheme.colors.absoluteWhite.copy(alpha = 0.6f)
+      )
+    },
+    colors = TextFieldDefaults.colors(
+      focusedContainerColor = PokedexTheme.colors.primary,
+      unfocusedContainerColor = PokedexTheme.colors.primary,
+      disabledContainerColor = PokedexTheme.colors.primary,
+      focusedIndicatorColor = Color.Transparent,
+      unfocusedIndicatorColor = Color.Transparent,
+      cursorColor = PokedexTheme.colors.absoluteWhite,
+      focusedTextColor = PokedexTheme.colors.absoluteWhite,
+      unfocusedTextColor = PokedexTheme.colors.absoluteWhite,
+      focusedPlaceholderColor = PokedexTheme.colors.absoluteWhite,
+      unfocusedPlaceholderColor = PokedexTheme.colors.absoluteWhite,
+    )
+  )
+}
+
 @Preview
 @Composable
 private fun PokedexAppBarPreview() {
   PokedexTheme {
-    PokedexAppBar()
+    PokedexAppBar(
+      isSearchActive = false
+    )
   }
 }
+
+@Preview
+@Composable
+private fun PokedexAppBarActiveSearchPreview() {
+  PokedexTheme {
+    PokedexAppBar(
+      isSearchActive = true
+    )
+  }
+}
+
